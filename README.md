@@ -28,6 +28,10 @@ icons/                  192／512／maskable／apple-touch／favicon
 更新檢查時機：開啟 App 時、每 30 分鐘、每次從背景切回前景。
 第一次安裝不會跳提示（沒有舊版可換）。
 
+提示條出現前會先用 MessageChannel 向「等待中的 SW」和「目前控制頁面的 SW」各問一次
+`APP_VERSION`，兩邊相同就不提示；按「稍後」會把該版號記進 `localStorage`，同一版不再
+重複打擾。少了這兩道檢查，CDN 偶爾回舊的 `sw.js` 就會讓提示條反覆出現。
+
 ## 就醫摘要 QR（v0.3）
 
 結果頁可產生一張 QR code 交給檢傷。預設走**離線模式**：整份摘要壓縮（deflate-raw）

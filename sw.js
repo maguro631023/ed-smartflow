@@ -5,7 +5,7 @@
    版號一變 → cache 名稱改變 → 瀏覽器偵測到新 SW →
    前端顯示「有新版本」→ 使用者按更新 → SKIP_WAITING → 重新載入。
    ============================================================ */
-const APP_VERSION = 'v0.3.0';
+const APP_VERSION = 'v0.3.1';
 const SHELL_CACHE = `edsf-shell-${APP_VERSION}`;
 const RUNTIME_CACHE = `edsf-runtime-${APP_VERSION}`;
 
@@ -46,7 +46,9 @@ self.addEventListener('activate', e => {
 self.addEventListener('message', e => {
   if (e.data && e.data.type === 'SKIP_WAITING') self.skipWaiting();
   if (e.data && e.data.type === 'GET_VERSION') {
-    e.source && e.source.postMessage({ type: 'VERSION', version: APP_VERSION });
+    const reply = { type: 'VERSION', version: APP_VERSION };
+    if (e.ports && e.ports[0]) e.ports[0].postMessage(reply);
+    else if (e.source) e.source.postMessage(reply);
   }
 });
 

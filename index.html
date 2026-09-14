@@ -161,15 +161,18 @@ h2{font-size:20px;font-weight:700;margin:26px 0 10px}
   position:fixed;left:0;right:0;z-index:60;
   bottom:calc(88px + env(safe-area-inset-bottom,0px));
   padding:0 16px;pointer-events:none;
+  visibility:hidden;transition:visibility 0s .32s;
 }
+.toast.show{visibility:visible;transition:visibility 0s}
 .toast .in{
   max-width:480px;margin:0 auto;pointer-events:auto;
   background:var(--teal-dark);color:#fff;border-radius:14px;
   padding:14px 14px 14px 16px;display:flex;align-items:center;gap:12px;
   box-shadow:0 8px 28px rgba(9,63,69,.28);
-  transform:translateY(140%);transition:transform .28s cubic-bezier(.2,.8,.25,1);
+  transform:translateY(calc(100% + 120px));opacity:0;
+  transition:transform .3s cubic-bezier(.2,.8,.25,1),opacity .2s;
 }
-.toast.show .in{transform:translateY(0)}
+.toast.show .in{transform:translateY(0);opacity:1}
 .toast .tx{flex:1;font-size:14.5px;line-height:1.45}
 .toast .tx b{display:block;font-weight:700;font-size:15.5px}
 .toast .tx span{opacity:.85;font-size:13px}
@@ -336,7 +339,7 @@ h2{font-size:20px;font-weight:700;margin:26px 0 10px}
 
 <div class="toast" id="updateToast" role="status" aria-live="polite">
   <div class="in">
-    <span class="tx"><b>有新版本</b><span id="updateNote">更新後會重新載入，目前填的內容會清空。</span></span>
+    <span class="tx"><b id="updateTitle">有新版本</b><span id="updateNote">更新後會重新載入，目前填的內容會清空。</span></span>
     <button class="later" id="updateLater">稍後</button>
     <button class="go" id="updateNow">立即更新</button>
   </div>
@@ -352,7 +355,7 @@ h2{font-size:20px;font-weight:700;margin:26px 0 10px}
    ============================================================ */
 
 const CONFIG = {
-  version: 'v0.3.0 · 2026-09-14',
+  version: 'v0.3.1 · 2026-09-14',
   /* 即時急診量能 API。留空 = 未串接，畫面會誠實顯示「無即時資料」。
      串接後須回傳：[{id, waitingPatients, pendingWard, pendingIcu, updatedAt}] */
   liveApiBase: '',
@@ -1066,29 +1069,46 @@ render();
   if (!('serviceWorker' in navigator)) return;
 
   const toast = document.getElementById('updateToast');
+  const title = document.getElementById('updateTitle');
   const btnNow = document.getElementById('updateNow');
   const btnLater = document.getElementById('updateLater');
-  let waitingSW = null, reloading = false;
+  const SKIP_KEY = 'edsf.skipVersion';
+  const get = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+  const put = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
+  const drop = k => { try { localStorage.removeItem(k); } catch (e) {} };
 
+  let waitingSW = null, pendingVersion = null, reloading = false;
   const show = () => toast.classList.add('show');
   const hide = () => toast.classList.remove('show');
-  btnLater.onclick = hide;
+
+  btnLater.onclick = () => { if (pendingVersion) put(SKIP_KEY, pendingVersion); hide(); };
 
   btnNow.onclick = () => {
     if (!waitingSW) return;
+    drop(SKIP_KEY);
     btnNow.disabled = true;
     btnNow.textContent = '更新中…';
     waitingSW.postMessage({ type: 'SKIP_WAITING' });
-    // 保險絲：3 秒內沒等到 controllerchange 就直接重載
     setTimeout(() => { if (!reloading) { reloading = true; location.reload(); } }, 3000);
   };
 
-  // 新 SW 接管後重新載入，載入到的就是新版本
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     if (reloading) return;
     reloading = true;
     location.reload();
   });
+
+  /* 問某個 Service Worker 它是哪一版；問不到就回 null */
+  function askVersion(worker, ms) {
+    return new Promise(resolve => {
+      if (!worker) return resolve(null);
+      const ch = new MessageChannel();
+      const t = setTimeout(() => resolve(null), ms || 1500);
+      ch.port1.onmessage = ev => { clearTimeout(t); resolve((ev.data && ev.data.version) || null); };
+      try { worker.postMessage({ type: 'GET_VERSION' }, [ch.port2]); }
+      catch (e) { clearTimeout(t); resolve(null); }
+    });
+  }
 
   window.addEventListener('load', async () => {
     let reg;
@@ -1096,13 +1116,21 @@ render();
       reg = await navigator.serviceWorker.register('sw.js', { scope: './', updateViaCache: 'none' });
     } catch (e) { return; }
 
-    // 只有「已經有舊版在跑」時才提示；第一次安裝不打擾使用者
-    const offer = w => {
-      if (w && w.state === 'installed' && navigator.serviceWorker.controller) {
-        waitingSW = w;
-        show();
-      }
-    };
+    /* 只有在「真的是不同版本」而且使用者沒按過稍後時才提示。
+       沒有這道檢查的話，CDN 偶爾回舊檔就會讓提示條一直冒出來。 */
+    async function offer(w) {
+      if (!w || w.state !== 'installed' || !navigator.serviceWorker.controller) return;
+      const [next, cur] = await Promise.all([
+        askVersion(w), askVersion(navigator.serviceWorker.controller)
+      ]);
+      if (next && cur && next === cur) return;
+      if (next && get(SKIP_KEY) === next) return;
+      waitingSW = w;
+      pendingVersion = next;
+      title.textContent = next ? '有新版本 ' + next : '有新版本';
+      show();
+    }
+
     offer(reg.waiting);
     reg.addEventListener('updatefound', () => {
       const w = reg.installing;
@@ -1110,7 +1138,6 @@ render();
       w.addEventListener('statechange', () => offer(w));
     });
 
-    // 主動檢查更新：開啟時、每 30 分鐘、每次切回前景
     const check = () => { reg.update().catch(() => {}); };
     check();
     setInterval(check, 30 * 60 * 1000);
