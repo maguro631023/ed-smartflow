@@ -65,4 +65,3 @@ icons/                  192／512／maskable／apple-touch／favicon
 - [ ] 分流規則送急診醫學科審查
 - [ ] TFDA 醫療器材軟體分類分級確認
 - [ ] 醫院端 Transfer Dashboard
-"# ed-smartflow" 

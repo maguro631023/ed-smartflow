@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>就醫導航 — 我現在該去哪裡看病？</title>
+<meta name="description" content="症狀初步判斷、就醫層級建議、鄰近急診與診所導引。非診斷工具。">
+<meta name="theme-color" content="#0E5C63">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/favicon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="就醫導航">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F5F7F8;
+  --card:#FFFFFF;
+  --ink:#10202A;
+  --ink-soft:#4A6270;
+  --line:#D8E0E4;
+  --teal:#0E5C63;
+  --teal-dark:#093F45;
+  --l1:#B3261E;
+  --l2:#C75300;
+  --l3:#8A6A00;
+  --l4:#1B6B43;
+  --focus:#0E5C63;
+  --r:14px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+  background:var(--paper);color:var(--ink);
+  font-family:"Noto Sans TC",system-ui,-apple-system,"PingFang TC","Microsoft JhengHei",sans-serif;
+  font-size:17px;line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+  font-variant-numeric:tabular-nums;
+}
+button{font-family:inherit;font-size:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* ---- 永遠在最上方的緊急出口 ---- */
+.emg{
+  position:sticky;top:0;z-index:50;
+  display:flex;align-items:center;gap:10px;
+  background:var(--l1);color:#fff;
+  padding:10px 14px calc(10px + env(safe-area-inset-bottom,0px)/8) 14px;
+  border:none;width:100%;text-align:left;
+  font-weight:700;letter-spacing:.02em;
+}
+.emg small{display:block;font-weight:400;font-size:13px;opacity:.92;line-height:1.35}
+.emg .dial{margin-left:auto;background:#fff;color:var(--l1);border-radius:999px;padding:6px 16px;font-weight:900;font-size:18px}
+
+.wrap{max-width:480px;margin:0 auto;padding:0 16px 120px}
+
+/* ---- 進度 ---- */
+.prog{display:flex;gap:4px;margin:16px 0 4px}
+.prog i{flex:1;height:4px;border-radius:2px;background:var(--line)}
+.prog i.on{background:var(--teal)}
+.stepname{font-size:13px;color:var(--ink-soft);margin-bottom:18px}
+
+h1{font-size:26px;line-height:1.35;font-weight:900;margin:0 0 6px;letter-spacing:-.01em}
+h2{font-size:20px;font-weight:700;margin:26px 0 10px}
+.sub{color:var(--ink-soft);font-size:15px;margin:0 0 20px}
+
+/* ---- 選項 ---- */
+.opts{display:grid;gap:10px}
+.opts.two{grid-template-columns:1fr 1fr}
+.opt{
+  display:flex;align-items:center;gap:12px;
+  background:var(--card);border:1.5px solid var(--line);border-radius:var(--r);
+  padding:16px 14px;text-align:left;width:100%;min-height:64px;
+  transition:border-color .12s,background .12s;
+}
+.opt .ico{font-size:26px;line-height:1;flex:none;width:32px;text-align:center}
+.opt .tx{font-weight:500}
+.opt .tx b{display:block;font-weight:700}
+.opt .tx span{display:block;font-size:13.5px;color:var(--ink-soft);line-height:1.45}
+.opt[aria-pressed="true"]{border-color:var(--teal);background:#E7F1F1;box-shadow:inset 0 0 0 1.5px var(--teal)}
+.opt .chk{margin-left:auto;width:24px;height:24px;border-radius:7px;border:1.5px solid var(--line);flex:none;display:grid;place-items:center;font-size:14px;color:#fff}
+.opt[aria-pressed="true"] .chk{background:var(--teal);border-color:var(--teal)}
+.opt.danger[aria-pressed="true"]{border-color:var(--l1);background:#FBEAE9;box-shadow:inset 0 0 0 1.5px var(--l1)}
+.opt.danger[aria-pressed="true"] .chk{background:var(--l1);border-color:var(--l1)}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.tile{
+  background:var(--card);border:1.5px solid var(--line);border-radius:var(--r);
+  padding:14px 6px;display:grid;gap:6px;place-items:center;min-height:92px;font-size:14px;font-weight:500
+}
+.tile .ico{font-size:28px}
+.tile[aria-pressed="true"]{border-color:var(--teal);background:#E7F1F1;box-shadow:inset 0 0 0 1.5px var(--teal)}
+
+/* ---- 底部主要動作 ---- */
+.bar{
+  position:fixed;left:0;right:0;bottom:0;z-index:40;
+  background:linear-gradient(to top,var(--paper) 62%,rgba(245,247,248,0));
+  padding:18px 16px calc(16px + env(safe-area-inset-bottom,0px));
+}
+.bar .in{max-width:480px;margin:0 auto;display:flex;gap:10px}
+.btn{
+  flex:1;background:var(--teal);color:#fff;border:none;border-radius:12px;
+  padding:16px;font-weight:700;font-size:17px;min-height:56px
+}
+.btn:disabled{background:#B7C4C9;color:#EEF3F4}
+.btn.ghost{flex:none;width:64px;background:transparent;border:1.5px solid var(--line);color:var(--ink-soft);font-size:15px}
+
+/* ---- 結果 ---- */
+.band{margin:18px -16px 0;padding:26px 20px 22px;color:#fff}
+.band .lv{font-size:13px;font-weight:700;opacity:.9;margin-bottom:4px}
+.band h1{color:#fff;font-size:29px;margin-bottom:8px}
+.band p{margin:0;font-size:15.5px;opacity:.95}
+.band.L1{background:var(--l1)} .band.L2{background:var(--l2)}
+.band.L3{background:var(--l3)} .band.L4{background:var(--l4)}
+.because{background:var(--card);border:1px solid var(--line);border-top:none;margin:0 -16px 20px;padding:14px 20px;font-size:14.5px;color:var(--ink-soft)}
+.because b{color:var(--ink)}
+
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px;margin-bottom:12px}
+.card h3{margin:0 0 8px;font-size:17px;font-weight:700}
+.card p{margin:0 0 10px;font-size:15px;color:var(--ink-soft)}
+.link{display:flex;align-items:center;gap:10px;background:var(--teal);color:#fff;border-radius:10px;padding:13px 14px;text-decoration:none;font-weight:700;justify-content:center;min-height:50px}
+.link.out{background:#fff;color:var(--teal);border:1.5px solid var(--teal)}
+
+/* ---- 醫院清單 ---- */
+.hosp{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-bottom:10px}
+.hosp .top{display:flex;align-items:baseline;gap:8px}
+.hosp .nm{font-weight:700;font-size:17px;flex:1}
+.hosp .meta{font-size:14px;color:var(--ink-soft);margin:4px 0 10px}
+.hosp .meta b{color:var(--ink);font-weight:700}
+.rank{flex:none;width:24px;height:24px;border-radius:6px;background:var(--teal);color:#fff;display:grid;place-items:center;font-size:13px;font-weight:700}
+.loadbar{height:8px;border-radius:4px;background:var(--line);overflow:hidden;margin:8px 0 4px}
+.loadbar i{display:block;height:100%}
+.acts{display:flex;gap:8px;margin-top:10px}
+.acts a{flex:1;text-align:center;text-decoration:none;border:1.5px solid var(--line);border-radius:10px;padding:10px;font-size:14.5px;font-weight:700;color:var(--teal);min-height:44px;display:grid;place-items:center}
+.acts a.go{background:var(--teal);color:#fff;border-color:var(--teal)}
+.pill{font-size:12px;font-weight:700;padding:3px 9px;border-radius:999px;background:#E7F1F1;color:var(--teal-dark)}
+
+.watch{background:#FFF8E8;border:1px solid #E8D49A;border-radius:var(--r);padding:16px;margin-bottom:12px}
+.watch h3{margin:0 0 8px;font-size:17px}
+.watch ul{margin:0;padding-left:20px}
+.watch li{margin-bottom:5px;font-size:15px}
+.worse{width:100%;margin-top:12px;background:var(--l2);color:#fff;border:none;border-radius:12px;padding:15px;font-weight:700;min-height:54px}
+
+.note{font-size:13px;line-height:1.6;color:var(--ink-soft);background:#EDF1F3;border-radius:10px;padding:12px 14px;margin:16px 0}
+.foot{font-size:12.5px;color:var(--ink-soft);line-height:1.6;margin-top:26px;padding-top:16px;border-top:1px solid var(--line)}
+.speak{background:none;border:none;color:var(--teal);font-size:14px;font-weight:700;padding:6px 0;margin-bottom:10px}
+.hide{display:none}
+
+/* ---- 新版本提示 ---- */
+.toast{
+  position:fixed;left:0;right:0;z-index:60;
+  bottom:calc(88px + env(safe-area-inset-bottom,0px));
+  padding:0 16px;pointer-events:none;
+}
+.toast .in{
+  max-width:480px;margin:0 auto;pointer-events:auto;
+  background:var(--teal-dark);color:#fff;border-radius:14px;
+  padding:14px 14px 14px 16px;display:flex;align-items:center;gap:12px;
+  box-shadow:0 8px 28px rgba(9,63,69,.28);
+  transform:translateY(140%);transition:transform .28s cubic-bezier(.2,.8,.25,1);
+}
+.toast.show .in{transform:translateY(0)}
+.toast .tx{flex:1;font-size:14.5px;line-height:1.45}
+.toast .tx b{display:block;font-weight:700;font-size:15.5px}
+.toast .tx span{opacity:.85;font-size:13px}
+.toast button{border:none;border-radius:10px;padding:11px 16px;font-weight:700;font-size:15px;min-height:44px;flex:none}
+.toast .go{background:#fff;color:var(--teal-dark)}
+.toast .later{background:transparent;color:#fff;opacity:.7;padding:11px 4px;font-weight:500}
+.toast .go[disabled]{opacity:.6}
+@media (prefers-reduced-motion:reduce){.toast .in{transition:none}}
+.offline{background:var(--ink);color:#fff;font-size:13px;text-align:center;padding:9px 14px;line-height:1.45}
+</style>
+</head>
+<body>
+
+<button class="emg" id="emgBtn">
+  <span>撥打 119
+    <small>意識不清、呼吸困難、胸痛冒冷汗、疑似中風，不要自行開車</small>
+  </span>
+  <span class="dial">119</span>
+</button>
+
+<div class="offline hide" id="offlineBar">目前離線，可以繼續完成評估；急診即時資訊與導航需要連線。</div>
+
+<div class="wrap">
+  <div class="prog" id="prog" aria-hidden="true"></div>
+  <div class="stepname" id="stepname"></div>
+  <main id="app"></main>
+  <div class="foot">
+    本工具依公開衛教原則提供<b>就醫層級建議</b>，不做疾病診斷，也不取代醫療專業人員的判斷。<br>
+    急診即時資訊以各醫院官方頁面為準。資料來源：衛生福利部醫事司「全國重度級急救責任醫院與兒童醫院急診即時訊息」。<br>
+    <span id="ver"></span>
+  </div>
+</div>
+
+<div class="toast" id="updateToast" role="status" aria-live="polite">
+  <div class="in">
+    <span class="tx"><b>有新版本</b><span id="updateNote">更新後會重新載入，目前填的內容會清空。</span></span>
+    <button class="later" id="updateLater">稍後</button>
+    <button class="go" id="updateNow">立即更新</button>
+  </div>
+</div>
+
+<div class="bar" id="bar"><div class="in" id="barIn"></div></div>
+
+<script>
+/* ============================================================
+   就醫導航 ED SmartFlow — 原型 v0.1
+   單檔 HTML，無後端。部署於 GitHub Pages。
+   ============================================================ */
+
+const CONFIG = {
+  version: 'v0.2.0 · 2026-09-14',
+  /* 即時急診量能 API。留空 = 未串接，畫面會誠實顯示「無即時資料」。
+     串接後須回傳：[{id, waitingPatients, pendingWard, pendingIcu, updatedAt}] */
+  liveApiBase: '',
+  /* 示範模式：用假資料展示 ETAC 排序效果，畫面會標示「示範資料」 */
+  demoMode: false,
+  speed: { urban: 24 },      // km/h，市區平均車速
+  detour: 1.30               // 直線距離 → 實際路徑修正係數
+};
+
+/* ---------- 醫院資料 ----------
+   僅收錄可由官方文件核實的欄位：縣市、重度級急救責任醫院、官方即時資訊網址。
+   座標為概略值（供距離排序用），正式版請以院方地址重新地理編碼。
+   刻意不硬編 PCI／中風／創傷等能力旗標 — 須經各縣市緊急醫療網轉診規劃表核實後才可加入。 */
+const HOSPITALS = [
+ {id:'wanfang', nm:'臺北市立萬芳醫院', city:'臺北市', lat:24.9994, lng:121.5581, live:'https://www.wanfang.gov.tw/live/emergency'},
+ {id:'tmuh',    nm:'臺北醫學大學附設醫院', city:'臺北市', lat:25.0264, lng:121.5605, live:'https://www.tmuh.org.tw/guide/%20immediate'},
+ {id:'ntuh',    nm:'臺大醫院', city:'臺北市', lat:25.0410, lng:121.5190, live:'https://www.ntuh.gov.tw/ntuh/Fpage.action?muid=3204&fid=3008'},
+ {id:'vghtpe',  nm:'臺北榮民總醫院', city:'臺北市', lat:25.1205, lng:121.5199, live:'https://www6.vghtpe.gov.tw/ERREALIFO/ERREALIFO.jsp'},
+ {id:'mmh-tp',  nm:'馬偕紀念醫院（台北）', city:'臺北市', lat:25.0585, lng:121.5215, live:'https://mcloudws.mmh.org.tw/DMZWEBEMRA651/Default.aspx?a=TP'},
+ {id:'cgh',     nm:'國泰綜合醫院', city:'臺北市', lat:25.0333, lng:121.5480, live:'http://med.cgh.org.tw/unit/branch/Pharmacy/ebl/RealTimeInfoHQ.html'},
+ {id:'skh',     nm:'新光吳火獅紀念醫院', city:'臺北市', lat:25.1123, lng:121.5216, live:'https://www.skh.org.tw/skh_regis/#/register/info/emergency'},
+ {id:'tsgh',    nm:'三軍總醫院', city:'臺北市', lat:25.0725, lng:121.5928, live:'https://www1.ndmctsgh.edu.tw/ErOnlineNews'},
+ {id:'chgh',    nm:'振興醫院', city:'臺北市', lat:25.1225, lng:121.5192, live:'https://services.chgh.org.tw/er/show_web.aspx'},
+ {id:'tpech',   nm:'臺北市立聯合醫院仁愛院區', city:'臺北市', lat:25.0376, lng:121.5432, live:'https://tpech.gov.taipei/mp109151/News_Content.aspx?n=C0D8D7D29C418D12&sms=F111AC2F5A0A16CE&s=D3E73D9077CEA071'},
+ {id:'shh',     nm:'衛生福利部雙和醫院', city:'新北市', lat:24.9982, lng:121.5103, live:'https://shh.tmu.edu.tw/OldShhorg/page/EPD_V.aspx'},
+ {id:'femh',    nm:'亞東紀念醫院', city:'新北市', lat:24.9993, lng:121.4527, live:'https://www.femh.org.tw/research/news_op.aspx'},
+ {id:'tzuchi',  nm:'台北慈濟醫院', city:'新北市', lat:24.9705, lng:121.5396, live:'https://app.tzuchi.com.tw/tchw/TPHIS5WebBedInfo/erbedinfo.aspx'},
+ {id:'cth',     nm:'天主教耕莘醫院', city:'新北市', lat:24.9743, lng:121.5405, live:'http://erstatus.cth.org.tw:82/waitbedweb/CTH.aspx'},
+ {id:'tph',     nm:'衛生福利部臺北醫院', city:'新北市', lat:25.0382, lng:121.4562, live:'https://nreg.tph.mohw.gov.tw/webreg/bedinfo.asp'},
+ {id:'fjuh',    nm:'輔仁大學附設醫院', city:'新北市', lat:25.0344, lng:121.4266, live:'http://hisinfo.fjuh.fju.edu.tw/erinfo/'},
+ {id:'mmh-td',  nm:'馬偕紀念醫院淡水分院', city:'新北市', lat:25.1737, lng:121.4498, live:'https://mcloudws.mmh.org.tw/DMZWEBEMRA651/Default.aspx'},
+ {id:'tcgh',    nm:'新北市立土城醫院', city:'新北市', lat:24.9749, lng:121.4415, live:'https://webapp.cgmh.org.tw/bed/erd/index.asp?loc=V'},
+ {id:'kcgmh',   nm:'基隆長庚紀念醫院', city:'基隆市', lat:25.1215, lng:121.7247, live:'https://webapp.cgmh.org.tw/bed/erd/index.asp?loc=2'}
+];
+
+const NHI_OVERVIEW = 'https://info.nhi.gov.tw/INAE4000/INAE4001S01';
+
+/* ---------- 症狀與紅旗 ---------- */
+const RED_FLAGS = [
+ {id:'conscious', ico:'😵', t:'叫不醒、意識模糊、答非所問'},
+ {id:'stroke',    ico:'🫨', t:'臉歪、單側手腳無力、突然講話不清'},
+ {id:'chest',     ico:'💔', t:'胸口悶痛且冒冷汗、痛到冒汗想吐'},
+ {id:'breath',    ico:'🫁', t:'喘到說不出完整句子、嘴唇發紫'},
+ {id:'bleed',     ico:'🩸', t:'大量出血壓不住、吐血、大量血便'},
+ {id:'seizure',   ico:'⚡', t:'抽搐、痙攣，或抽搐後未清醒'},
+ {id:'headache',  ico:'🤯', t:'這輩子最痛的頭痛，幾秒內爆發'},
+ {id:'trauma',    ico:'🚗', t:'車禍、高處墜落、被重物撞擊'},
+ {id:'poison',    ico:'☠️', t:'誤食藥物、化學品、疑似中毒'}
+];
+
+const SYMPTOMS = [
+ {id:'fever',  ico:'🌡️', t:'發燒'},
+ {id:'resp',   ico:'😷', t:'咳嗽喉嚨痛'},
+ {id:'gi',     ico:'🤢', t:'腹痛嘔吐腹瀉'},
+ {id:'chest2', ico:'🫀', t:'胸悶心悸'},
+ {id:'head',   ico:'🤕', t:'頭痛頭暈'},
+ {id:'injury', ico:'🩹', t:'外傷跌倒'},
+ {id:'urine',  ico:'🚻', t:'排尿不適'},
+ {id:'skin',   ico:'🫧', t:'皮疹過敏'},
+ {id:'other',  ico:'❓', t:'其他不適'}
+];
+
+/* 各症狀的「建議急診」警訊 */
+const AMBER = {
+ fever:[
+  {id:'f1', t:'發燒超過 3 天沒有退，或退燒藥壓不下來'},
+  {id:'f2', t:'合併意識改變、脖子僵硬、劇烈頭痛'},
+  {id:'f3', t:'發燒合併呼吸變喘、皮膚出現壓不退的紫斑'},
+  {id:'f4', t:'3 個月以下嬰兒發燒'}
+ ],
+ resp:[
+  {id:'r1', t:'走幾步就喘、平躺會喘醒'},
+  {id:'r2', t:'咳血或痰中帶血'},
+  {id:'r3', t:'喉嚨痛到吞不下口水、流口水、聲音改變'},
+  {id:'r4', t:'原本慢性肺病，這兩天明顯惡化'}
+ ],
+ gi:[
+  {id:'g1', t:'腹痛越來越痛，按壓後放開更痛'},
+  {id:'g2', t:'解黑便、血便，或嘔吐物帶血'},
+  {id:'g3', t:'吐到完全喝不下水、超過 8 小時沒尿'},
+  {id:'g4', t:'腹痛合併發燒、皮膚或眼白變黃'}
+ ],
+ chest2:[
+  {id:'c1', t:'胸痛持續超過 15 分鐘沒有緩解'},
+  {id:'c2', t:'胸痛延伸到下巴、左手臂或背部'},
+  {id:'c3', t:'心悸合併頭暈、快昏倒、冒冷汗'},
+  {id:'c4', t:'突然單側小腿腫痛後開始胸痛或喘'}
+ ],
+ head:[
+  {id:'h1', t:'頭痛合併發燒、脖子僵硬、噴射狀嘔吐'},
+  {id:'h2', t:'頭暈到站不穩、走路偏一邊、看東西有雙影'},
+  {id:'h3', t:'頭部受過撞擊後才開始頭痛或嘔吐'},
+  {id:'h4', t:'突然聽不到、單側耳鳴合併嚴重暈眩'}
+ ],
+ injury:[
+  {id:'i1', t:'肢體變形、無法承重或完全不能動'},
+  {id:'i2', t:'傷口深、很大、有異物、或壓 10 分鐘仍在流血'},
+  {id:'i3', t:'頭部受傷後曾昏過去、嘔吐或記不得經過'},
+  {id:'i4', t:'被動物咬傷、生鏽金屬穿刺傷'}
+ ],
+ urine:[
+  {id:'u1', t:'完全尿不出來、下腹脹痛'},
+  {id:'u2', t:'腰側劇痛到冒冷汗、合併發燒發冷'},
+  {id:'u3', t:'血尿合併發燒'},
+  {id:'u4', t:'男性陰囊突然劇痛腫脹'}
+ ],
+ skin:[
+  {id:'s1', t:'嘴唇或眼皮腫、喉嚨緊、聲音變啞'},
+  {id:'s2', t:'全身起疹合併頭暈、想吐、快昏倒'},
+  {id:'s3', t:'皮膚出現壓不退的紫斑或大片水泡'},
+  {id:'s4', t:'紅腫熱痛範圍一天內明顯擴大並發燒'}
+ ],
+ other:[
+  {id:'o1', t:'症狀在幾小時內明顯惡化'},
+  {id:'o2', t:'整個人虛弱到站不起來、無法自理'},
+  {id:'o3', t:'家人覺得「跟平常很不一樣」'},
+  {id:'o4', t:'合併發燒或呼吸變喘'}
+ ]
+};
+
+/* 特殊身分 — 會拉高就醫層級 */
+const SPECIAL = [
+ {id:'chemo',  ico:'💉', t:'癌症治療中', d:'化療、放療、免疫治療或標靶治療 6 週內'},
+ {id:'immuno', ico:'🛡️', t:'免疫力低下', d:'長期類固醇、免疫抑制劑、器官移植、脾臟切除'},
+ {id:'preg',   ico:'🤰', t:'懷孕或產後 6 週內'},
+ {id:'anticoag',ico:'💊', t:'服用抗凝血劑', d:'如 warfarin、Eliquis、Xarelto、Pradaxa'},
+ {id:'dialysis',ico:'🩺', t:'洗腎中'},
+ {id:'postop', ico:'🔪', t:'一個月內開過刀或做過侵入性處置'},
+ {id:'port',   ico:'🔌', t:'身上有人工血管、導管或引流管'},
+ {id:'infant', ico:'👶', t:'3 個月以下嬰兒'}
+];
+
+/* ============================================================ */
+const state = {step:0, age:null, red:[], sym:null, amber:[], sp:[], level:null, geo:null, live:null};
+const STEPS = ['誰不舒服','立即危險徵象','主要不適','症狀細節','特殊狀況','建議'];
+const $ = s => document.querySelector(s);
+const app = $('#app'), barIn = $('#barIn');
+
+$('#ver').textContent = '版本 ' + CONFIG.version;
+$('#emgBtn').onclick = () => { location.href = 'tel:119'; };
+
+function toggle(arr, id){ const i = arr.indexOf(id); i < 0 ? arr.push(id) : arr.splice(i,1); }
+
+function speak(txt){
+  if(!('speechSynthesis' in window)) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(txt);
+  u.lang = 'zh-TW'; u.rate = .95;
+  speechSynthesis.speak(u);
+}
+
+function render(){
+  const isResult = state.step === 5;
+  $('#prog').innerHTML = STEPS.map((_,i)=>`<i class="${i<=state.step?'on':''}"></i>`).join('');
+  $('#stepname').textContent = isResult ? '' : `第 ${state.step+1} 步，共 5 步 · ${STEPS[state.step]}`;
+  window.scrollTo({top:0});
+  [drawAge, drawRed, drawSym, drawDetail, drawSpecial, drawResult][state.step]();
+}
+
+function bar(label, ok, onNext){
+  barIn.innerHTML = '';
+  if(state.step > 0){
+    const b = document.createElement('button');
+    b.className='btn ghost'; b.textContent='上一步';
+    b.onclick = ()=>{ state.step--; render(); };
+    barIn.appendChild(b);
+  }
+  const n = document.createElement('button');
+  n.className='btn'; n.textContent=label; n.disabled=!ok; n.onclick=onNext;
+  barIn.appendChild(n);
+}
+
+/* ---------- 1. 年齡 ---------- */
+function drawAge(){
+  app.innerHTML = `
+    <h1>現在是誰不舒服？</h1>
+    <p class="sub">年齡會影響判斷標準，尤其是嬰幼兒與長者。</p>
+    <div class="opts" id="ageOpts">
+      ${[['infant','👶','未滿 3 個月的嬰兒'],['child','🧒','3 個月～12 歲'],
+         ['adult','🧑','13～64 歲'],['elder','🧓','65 歲以上']]
+        .map(([v,i,t])=>`<button class="opt" data-v="${v}" aria-pressed="${state.age===v}">
+          <span class="ico">${i}</span><span class="tx"><b>${t}</b></span><span class="chk">✓</span></button>`).join('')}
+    </div>
+    <div class="note">這個工具只做初步分流建議，不做疾病診斷。任何時候覺得危險，直接打 119。</div>`;
+  app.querySelectorAll('.opt').forEach(b => b.onclick = ()=>{
+    state.age = b.dataset.v;
+    if(state.age === 'infant' && !state.sp.includes('infant')) state.sp.push('infant');
+    state.step = 1; render();
+  });
+  bar('下一步', !!state.age, ()=>{ state.step=1; render(); });
+}
+
+/* ---------- 2. 紅旗 ---------- */
+function drawRed(){
+  const q = '以下情況，現在有出現任何一項嗎？';
+  app.innerHTML = `
+    <h1>${q}</h1>
+    <p class="sub">可以複選。如果都沒有，直接按「都沒有」。</p>
+    <button class="speak" id="sp">🔊 朗讀這一題</button>
+    <div class="opts">
+      ${RED_FLAGS.map(f=>`<button class="opt danger" data-v="${f.id}" aria-pressed="${state.red.includes(f.id)}">
+        <span class="ico">${f.ico}</span><span class="tx"><b>${f.t}</b></span><span class="chk">✓</span></button>`).join('')}
+    </div>`;
+  $('#sp').onclick = ()=> speak(q + RED_FLAGS.map(f=>f.t).join('。'));
+  app.querySelectorAll('.opt').forEach(b => b.onclick = ()=>{
+    toggle(state.red, b.dataset.v);
+    b.setAttribute('aria-pressed', state.red.includes(b.dataset.v));
+    refreshRedBar();
+  });
+  refreshRedBar();
+}
+function refreshRedBar(){
+  if(state.red.length) bar('看建議', true, ()=>{ state.step=5; render(); });
+  else bar('都沒有，繼續', true, ()=>{ state.step=2; render(); });
+}
+
+/* ---------- 3. 主要症狀 ---------- */
+function drawSym(){
+  app.innerHTML = `
+    <h1>最不舒服的是哪一項？</h1>
+    <p class="sub">選一個最主要的。</p>
+    <div class="grid3">
+      ${SYMPTOMS.map(s=>`<button class="tile" data-v="${s.id}" aria-pressed="${state.sym===s.id}">
+        <span class="ico">${s.ico}</span><span>${s.t}</span></button>`).join('')}
+    </div>`;
+  app.querySelectorAll('.tile').forEach(b => b.onclick = ()=>{
+    if(state.sym !== b.dataset.v) state.amber = [];
+    state.sym = b.dataset.v; state.step = 3; render();
+  });
+  bar('下一步', !!state.sym, ()=>{ state.step=3; render(); });
+}
+
+/* ---------- 4. 症狀警訊 ---------- */
+function drawDetail(){
+  const list = AMBER[state.sym] || AMBER.other;
+  const nm = SYMPTOMS.find(s=>s.id===state.sym).t;
+  app.innerHTML = `
+    <h1>關於「${nm}」，有沒有下列情況？</h1>
+    <p class="sub">可以複選。沒有就直接繼續。</p>
+    <div class="opts">
+      ${list.map(a=>`<button class="opt" data-v="${a.id}" aria-pressed="${state.amber.includes(a.id)}">
+        <span class="ico">⚠️</span><span class="tx"><b>${a.t}</b></span><span class="chk">✓</span></button>`).join('')}
+    </div>`;
+  app.querySelectorAll('.opt').forEach(b => b.onclick = ()=>{
+    toggle(state.amber, b.dataset.v);
+    b.setAttribute('aria-pressed', state.amber.includes(b.dataset.v));
+  });
+  bar('下一步', true, ()=>{ state.step=4; render(); });
+}
+
+/* ---------- 5. 特殊狀況 ---------- */
+function drawSpecial(){
+  app.innerHTML = `
+    <h1>有沒有以下狀況？</h1>
+    <p class="sub">這幾項會讓同樣的症狀變得比較危險，建議據實勾選。</p>
+    <div class="opts">
+      ${SPECIAL.map(s=>`<button class="opt" data-v="${s.id}" aria-pressed="${state.sp.includes(s.id)}">
+        <span class="ico">${s.ico}</span><span class="tx"><b>${s.t}</b>${s.d?`<span>${s.d}</span>`:''}</span><span class="chk">✓</span></button>`).join('')}
+    </div>`;
+  app.querySelectorAll('.opt').forEach(b => b.onclick = ()=>{
+    toggle(state.sp, b.dataset.v);
+    b.setAttribute('aria-pressed', state.sp.includes(b.dataset.v));
+  });
+  bar('看建議', true, ()=>{ state.step=5; render(); });
+}
+
+/* ============================================================
+   分流邏輯
+   ============================================================ */
+function decide(){
+  const reasons = [];
+  if(state.red.length){
+    state.red.forEach(id => reasons.push(RED_FLAGS.find(f=>f.id===id).t));
+    return {lv:'L1', reasons};
+  }
+
+  const onco = state.sp.includes('chemo') || state.sp.includes('immuno');
+  const fever = state.sym === 'fever';
+
+  // 腫瘤／免疫低下 + 發燒 → 發熱性嗜中性球低下風險，直接急診
+  if(onco && fever){
+    reasons.push('癌症治療中或免疫力低下的人發燒，可能是白血球過低引起的感染，惡化很快');
+    return {lv:'L2', onco:true, reasons};
+  }
+  if(state.sp.includes('infant') && fever){
+    reasons.push('3 個月以下的嬰兒發燒，需要直接由醫院評估');
+    return {lv:'L2', reasons};
+  }
+  if(state.amber.length){
+    const list = AMBER[state.sym] || AMBER.other;
+    state.amber.forEach(id => { const a = list.find(x=>x.id===id); if(a) reasons.push(a.t); });
+    return {lv:'L2', onco, reasons};
+  }
+  if(onco || state.sp.includes('preg') || state.sp.includes('anticoag') ||
+     state.sp.includes('dialysis') || state.sp.includes('postop') || state.sp.includes('port')){
+    const nm = SPECIAL.filter(s=>state.sp.includes(s.id)).map(s=>s.t).join('、');
+    reasons.push(`目前沒有明顯的急診警訊，但因為${nm}，建議今天就讓醫師看過`);
+    return {lv:'L3', onco, reasons};
+  }
+  if(state.age === 'elder') reasons.push('目前沒有明顯的急診警訊；長者症狀常較不典型，建議先讓門診醫師評估');
+  else reasons.push('目前沒有出現需要立刻到急診的警訊');
+  return {lv: state.age === 'elder' ? 'L3' : 'L4', reasons};
+}
+
+/* ---------- 距離與 ETAC ---------- */
+const R = 6371;
+function haversine(a,b,c,d){
+  const t=x=>x*Math.PI/180, dLa=t(c-a), dLo=t(d-b);
+  const h=Math.sin(dLa/2)**2 + Math.cos(t(a))*Math.cos(t(c))*Math.sin(dLo/2)**2;
+  return 2*R*Math.asin(Math.sqrt(h));
+}
+function driveMin(km){ return Math.round(km * CONFIG.detour / CONFIG.speed.urban * 60); }
+
+/* EDLI：急診負荷指數（0–100）。權重目前為暫定值，正式版應以 BWM／FDM 由急診專家賦權。 */
+const W = {wait:.40, ward:.35, icu:.25};
+const CAP = {wait:60, ward:40, icu:12};
+function edli(d){
+  if(!d) return null;
+  const n=(v,c)=>Math.min(1,(v||0)/c);
+  return Math.round(100*(W.wait*n(d.waitingPatients,CAP.wait) + W.ward*n(d.pendingWard,CAP.ward) + W.icu*n(d.pendingIcu,CAP.icu)));
+}
+function loadColor(v){ return v>=75?'var(--l1)':v>=50?'var(--l2)':v>=25?'var(--l3)':'var(--l4)'; }
+function loadWord(v){ return v>=75?'高度壅塞':v>=50?'壅塞':v>=25?'普通':'順暢'; }
+
+async function loadLive(){
+  if(CONFIG.demoMode){
+    const seed = new Date().getMinutes();
+    state.live = {};
+    HOSPITALS.forEach((h,i)=>{
+      const k=(seed+i*7)%40;
+      state.live[h.id] = {waitingPatients:8+k, pendingWard:5+((seed+i*3)%32), pendingIcu:(seed+i)%9, demo:true};
+    });
+    return;
+  }
+  if(!CONFIG.liveApiBase) return;
+  try{
+    const r = await fetch(CONFIG.liveApiBase + '/er-live', {cache:'no-store'});
+    const j = await r.json();
+    state.live = {};
+    j.forEach(d => state.live[d.id] = d);
+  }catch(e){ state.live = null; }
+}
+
+function rankHospitals(){
+  const geo = state.geo;
+  return HOSPITALS.map(h=>{
+    const km = geo ? haversine(geo.lat, geo.lng, h.lat, h.lng) : null;
+    const drive = km == null ? null : driveMin(km);
+    const d = state.live ? state.live[h.id] : null;
+    const load = edli(d);
+    // ETAC ≈ 車程 + 預估等待（以 EDLI 換算為分鐘的粗估上限 150 分鐘）
+    const waitEst = load == null ? null : Math.round(load/100*150);
+    const etac = (drive != null && waitEst != null) ? drive + waitEst : null;
+    return {...h, km, drive, load, waitEst, etac, live:d};
+  }).sort((a,b)=>{
+    if(a.etac != null && b.etac != null) return a.etac - b.etac;
+    if(a.km != null && b.km != null) return a.km - b.km;
+    return 0;
+  });
+}
+
+/* ---------- 6. 結果 ---------- */
+async function drawResult(){
+  const r = decide();
+  state.level = r.lv;
+  const BAND = {
+    L1:{lv:'第 1 級', h:'現在就撥 119', p:'你描述的情況可能需要立即的緊急處置。不要自行開車前往，撥 119 讓救護人員先到你身邊。'},
+    L2:{lv:'第 2 級', h:'建議今天到急診評估', p:'症狀本身可能還穩定，但有需要在急診做檢查才能排除的狀況。'},
+    L3:{lv:'第 3 級', h:'建議先看診所或門診', p:'目前不需要急診。基層診所可以處理，而且等的時間通常短很多。'},
+    L4:{lv:'第 4 級', h:'可以先在家觀察', p:'目前沒有需要立刻就醫的警訊，但請照下面的清單留意變化。'}
+  }[r.lv];
+
+  app.innerHTML = `
+    <div class="band ${r.lv}">
+      <div class="lv">${BAND.lv}建議</div>
+      <h1>${BAND.h}</h1>
+      <p>${BAND.p}</p>
+    </div>
+    <div class="because"><b>為什麼這樣建議：</b><br>${r.reasons.map(x=>'· '+x).join('<br>')}</div>
+    <div id="body"></div>`;
+  const body = $('#body');
+
+  if(r.lv === 'L1'){
+    body.innerHTML = `
+      <a class="link" href="tel:119">📞 撥打 119</a>
+      <div class="note">等待救護車時：讓病人側躺保持呼吸道通暢，不要餵食或給水；準備好健保卡、平常吃的藥、過敏紀錄。</div>
+      <div class="card"><h3>最近的重度級急救責任醫院</h3>
+        <p>救護人員會依現場狀況決定送往醫院，以下僅供參考。</p>
+        <div id="hl"></div></div>`;
+    await fillHospitals($('#hl'), 3);
+  }
+
+  if(r.lv === 'L2'){
+    if(r.onco){
+      body.innerHTML += `
+      <div class="watch"><h3>癌症治療中的人請這樣說</h3>
+        <ul><li>到檢傷時第一句就說：「我正在做化療／免疫治療」</li>
+        <li>說出上一次治療是哪一天</li>
+        <li>帶治療紀錄卡、用藥清單、原治療醫院的病歷號</li>
+        <li>若有原治療團隊的 24 小時專線，先打電話</li></ul></div>`;
+    }
+    body.innerHTML += `
+      <div class="card"><h3>哪一家急診現在比較適合？</h3>
+        <p id="geoHint">開啟定位後，依車程與各院急診負荷排序。</p>
+        <button class="link out" id="geoBtn" style="width:100%;border:1.5px solid var(--teal)">📍 使用我的位置排序</button>
+        <div id="hl" style="margin-top:12px"></div></div>
+      <a class="link out" href="${NHI_OVERVIEW}" target="_blank" rel="noopener">查看全國急診即時訊息總覽（健保署）</a>`;
+    $('#geoBtn').onclick = askGeo;
+    await fillHospitals($('#hl'), 5);
+  }
+
+  if(r.lv === 'L3'){
+    body.innerHTML = `
+      <div class="card"><h3>先找附近的診所</h3>
+        <p>基層診所處理得了大部分這類問題，等待時間通常遠短於急診，部分負擔也低很多。</p>
+        <a class="link" id="mapClinic" href="#">🗺️ 搜尋附近現在有開的診所</a>
+        <div style="height:8px"></div>
+        <a class="link out" href="https://info.nhi.gov.tw/INAE1000/INAE1010S01" target="_blank" rel="noopener">查健保特約院所與門診時段</a>
+      </div>
+      <div class="watch"><h3>什麼時候要改去急診</h3><ul>${safetyNet().map(x=>`<li>${x}</li>`).join('')}</ul>
+        <button class="worse" id="worse">症狀變嚴重了，重新評估</button></div>`;
+    $('#mapClinic').href = 'https://www.google.com/maps/search/' + encodeURIComponent('附近診所 現在營業');
+    $('#worse').onclick = restart;
+  }
+
+  if(r.lv === 'L4'){
+    body.innerHTML = `
+      <div class="watch"><h3>出現下列任何一項，請重新評估或就醫</h3>
+        <ul>${safetyNet().map(x=>`<li>${x}</li>`).join('')}</ul>
+        <button class="worse" id="worse">症狀變嚴重了，重新評估</button></div>
+      <div class="card"><h3>在家可以做的</h3>
+        <p>規律補充水分、休息、記錄體溫與症狀變化的時間點；原本的慢性病用藥不要自行停掉。症狀持續超過 3 天沒有改善，還是掛個門診。</p>
+        <a class="link out" href="https://info.nhi.gov.tw/INAE1000/INAE1010S01" target="_blank" rel="noopener">查附近診所門診時段</a></div>`;
+    $('#worse').onclick = restart;
+  }
+
+  barIn.innerHTML = '';
+  const again = document.createElement('button');
+  again.className = 'btn ghost'; again.style.flex='1'; again.style.width='auto';
+  again.textContent = '重新評估'; again.onclick = restart;
+  barIn.appendChild(again);
+}
+
+function safetyNet(){
+  const base = [
+    '呼吸變喘、講話會斷句，或嘴唇、指甲發紫',
+    '叫不太醒、意識變得混亂',
+    '胸口持續悶痛，或痛到冒冷汗',
+    '一直吐、完全喝不下水，或超過 8 小時沒有小便',
+    '出現壓不退的紫斑，或身上冒冷汗、手腳冰冷'
+  ];
+  if(state.sp.includes('chemo') || state.sp.includes('immuno')) base.unshift('體溫達到 38°C（治療中的人發燒要當急症處理）');
+  if(state.sp.includes('preg')) base.unshift('陰道出血、規則腹痛、胎動明顯減少');
+  if(state.age === 'child' || state.age === 'infant') base.unshift('活動力明顯變差、不喝奶、尿布 8 小時以上沒濕');
+  return base;
+}
+
+function askGeo(){
+  const hint = $('#geoHint');
+  if(!navigator.geolocation){ hint.textContent = '這台裝置不支援定位，以下依預設順序顯示。'; return; }
+  hint.textContent = '正在取得位置…';
+  navigator.geolocation.getCurrentPosition(
+    async p => {
+      state.geo = {lat:p.coords.latitude, lng:p.coords.longitude};
+      hint.textContent = '已依你的位置排序。車程為直線距離推估，實際以導航為準。';
+      await fillHospitals($('#hl'), 5);
+    },
+    () => { hint.textContent = '沒有取得定位權限，以下依預設順序顯示。'; },
+    {timeout:8000, maximumAge:60000}
+  );
+}
+
+async function fillHospitals(el, n){
+  el.innerHTML = '<p style="color:var(--ink-soft);font-size:14px">載入中…</p>';
+  await loadLive();
+  const list = rankHospitals().slice(0, n);
+  const noLive = !state.live;
+  el.innerHTML = list.map((h,i)=>`
+    <div class="hosp">
+      <div class="top"><span class="rank">${i+1}</span><span class="nm">${h.nm}</span>
+        ${h.load!=null?`<span class="pill" style="background:${loadColor(h.load)};color:#fff">${loadWord(h.load)} ${h.load}</span>`:''}</div>
+      <div class="meta">${h.city} · 重度級急救責任醫院${h.drive!=null?` · 估計車程 <b>${h.drive} 分</b>（約 ${h.km.toFixed(1)} 公里）`:''}
+        ${h.etac!=null?`<br>預估到「開始被處理」約 <b>${h.etac} 分</b>（車程 ${h.drive} + 等待推估 ${h.waitEst}）`:''}</div>
+      ${h.load!=null?`<div class="loadbar"><i style="width:${h.load}%;background:${loadColor(h.load)}"></i></div>`:''}
+      ${h.live&&h.live.demo?'<div style="font-size:12px;color:var(--l2);font-weight:700">示範資料，非真實數字</div>':''}
+      <div class="acts">
+        <a class="go" href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(h.nm)}" target="_blank" rel="noopener">導航</a>
+        <a href="${h.live}" target="_blank" rel="noopener">即時資訊</a>
+      </div>
+    </div>`).join('')
+    + (noLive ? `<div class="note">目前未串接急診即時量能，以下僅依距離排序。各院官方即時人數請按「即時資訊」，或看
+        <a href="${NHI_OVERVIEW}" target="_blank" rel="noopener">健保署總覽頁</a>。</div>` : '');
+}
+
+function restart(){
+  Object.assign(state, {step:0, age:null, red:[], sym:null, amber:[], sp:[], level:null});
+  render();
+}
+
+render();
+</script>
+
+<script>
+/* ============================================================
+   PWA：安裝、離線、以及「有新版本 → 使用者按下更新 → 自動更新」
+   ============================================================ */
+(function () {
+  /* ---- 離線提示 ---- */
+  const offBar = document.getElementById('offlineBar');
+  const syncNet = () => offBar.classList.toggle('hide', navigator.onLine);
+  window.addEventListener('online', syncNet);
+  window.addEventListener('offline', syncNet);
+  syncNet();
+
+  if (!('serviceWorker' in navigator)) return;
+
+  const toast = document.getElementById('updateToast');
+  const btnNow = document.getElementById('updateNow');
+  const btnLater = document.getElementById('updateLater');
+  let waitingSW = null, reloading = false;
+
+  const show = () => toast.classList.add('show');
+  const hide = () => toast.classList.remove('show');
+  btnLater.onclick = hide;
+
+  btnNow.onclick = () => {
+    if (!waitingSW) return;
+    btnNow.disabled = true;
+    btnNow.textContent = '更新中…';
+    waitingSW.postMessage({ type: 'SKIP_WAITING' });
+    // 保險絲：3 秒內沒等到 controllerchange 就直接重載
+    setTimeout(() => { if (!reloading) { reloading = true; location.reload(); } }, 3000);
+  };
+
+  // 新 SW 接管後重新載入，載入到的就是新版本
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (reloading) return;
+    reloading = true;
+    location.reload();
+  });
+
+  window.addEventListener('load', async () => {
+    let reg;
+    try {
+      reg = await navigator.serviceWorker.register('sw.js', { scope: './', updateViaCache: 'none' });
+    } catch (e) { return; }
+
+    // 只有「已經有舊版在跑」時才提示；第一次安裝不打擾使用者
+    const offer = w => {
+      if (w && w.state === 'installed' && navigator.serviceWorker.controller) {
+        waitingSW = w;
+        show();
+      }
+    };
+    offer(reg.waiting);
+    reg.addEventListener('updatefound', () => {
+      const w = reg.installing;
+      if (!w) return;
+      w.addEventListener('statechange', () => offer(w));
+    });
+
+    // 主動檢查更新：開啟時、每 30 分鐘、每次切回前景
+    const check = () => { reg.update().catch(() => {}); };
+    check();
+    setInterval(check, 30 * 60 * 1000);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') check();
+    });
+  });
+})();
+</script>
+</body>
+</html>

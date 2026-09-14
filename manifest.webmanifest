@@ -1,0 +1,27 @@
+{
+  "name": "就醫導航 — 我現在該去哪裡看病？",
+  "short_name": "就醫導航",
+  "description": "症狀初步判斷、就醫層級建議、鄰近急診與診所導引。非診斷工具。",
+  "lang": "zh-Hant-TW",
+  "dir": "ltr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F5F7F8",
+  "theme_color": "#0E5C63",
+  "categories": ["health", "medical", "navigation"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    {
+      "name": "重新評估症狀",
+      "short_name": "重新評估",
+      "url": "./?action=restart",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}
