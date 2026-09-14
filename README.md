@@ -8,7 +8,9 @@
 ## 檔案結構
 
 ```
-index.html              主程式（單檔，含分流邏輯與 UI）
+index.html              病人端主程式（分流邏輯、設定、QR 產生）
+v.html                  醫院端檢視頁 — 掃 QR 後開啟的就醫摘要
+qr.js                   自製 QR 編碼器（byte mode／EC level M／版本 1–40，無外部相依）
 sw.js                   Service Worker — 離線快取與版本更新
 manifest.webmanifest    PWA 安裝設定
 icons/                  192／512／maskable／apple-touch／favicon
@@ -25,6 +27,37 @@ icons/                  192／512／maskable／apple-touch／favicon
 
 更新檢查時機：開啟 App 時、每 30 分鐘、每次從背景切回前景。
 第一次安裝不會跳提示（沒有舊版可換）。
+
+## 就醫摘要 QR（v0.3）
+
+結果頁可產生一張 QR code 交給檢傷。預設走**離線模式**：整份摘要壓縮（deflate-raw）
+後以 base64url 放進網址的 **fragment**，QR 內容形如
+
+```
+https://maguro631023.github.io/ed-smartflow/v.html#z:<payload>
+```
+
+fragment 依規格不會送到伺服器，所以資料完全不離開手機；`v.html` 只是一支靜態頁，
+在瀏覽器端解壓縮後排版顯示。沒有網路也產得出來。
+
+為了讓符號夠小、掃得穩，payload 存的是**代碼**而非整段中文（`am:["f1","f3"]`）。
+`v.html` 內的 `DICT` 由 `index.html` 的資料表產生，兩邊必須同步；遇到不認得的代碼
+會顯示「未知代碼 xxx」而不是靜默略過。典型含完整個人資料的摘要約 550 bytes，
+落在 QR 版本 18（89×89），手機螢幕可正常掃描。
+
+### 伺服器模式（選用，預設關閉）
+
+在 `index.html` 設定 `CONFIG.summaryApiBase`、在 `v.html` 設定 `API_BASE` 後，
+設定頁的「上傳伺服器後產生短連結」才會生效：
+
+```
+POST {base}/summary        body: <摘要 JSON>   → 200 {"id":"<取件代碼>"}
+GET  {base}/summary/{id}                       → 200 <摘要 JSON> / 404
+```
+
+**啟用前必須先處理**：摘要含姓名、病史、用藥、聯絡電話，屬個人資料保護法第 6 條的
+病歷與健康檢查資料。上線前需要告知同意流程、傳輸與儲存加密、存取稽核、自動過期
+刪除，以及萬芳資安與 IRB 的意見。離線模式沒有這些問題，所以設為預設。
 
 ## 目前完成（v0.2）
 
@@ -65,3 +98,5 @@ icons/                  192／512／maskable／apple-touch／favicon
 - [ ] 分流規則送急診醫學科審查
 - [ ] TFDA 醫療器材軟體分類分級確認
 - [ ] 醫院端 Transfer Dashboard
+- [ ] 摘要 API 的個資保護設計（同意、加密、稽核、自動刪除）送資安與 IRB
+- [ ] v.html 的欄位是否符合檢傷實際需要，請急診護理長試看一輪

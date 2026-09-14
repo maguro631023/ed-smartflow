@@ -5,13 +5,15 @@
    版號一變 → cache 名稱改變 → 瀏覽器偵測到新 SW →
    前端顯示「有新版本」→ 使用者按更新 → SKIP_WAITING → 重新載入。
    ============================================================ */
-const APP_VERSION = 'v0.2.0';
+const APP_VERSION = 'v0.3.0';
 const SHELL_CACHE = `edsf-shell-${APP_VERSION}`;
 const RUNTIME_CACHE = `edsf-runtime-${APP_VERSION}`;
 
 const SHELL = [
   './',
   './index.html',
+  './v.html',
+  './qr.js',
   './manifest.webmanifest',
   './icons/icon-192.png',
   './icons/icon-512.png',

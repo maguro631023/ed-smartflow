@@ -48,14 +48,20 @@ button{font-family:inherit;font-size:inherit;color:inherit;cursor:pointer}
 /* ---- 永遠在最上方的緊急出口 ---- */
 .emg{
   position:sticky;top:0;z-index:50;
-  display:flex;align-items:center;gap:10px;
+  display:flex;align-items:stretch;
   background:var(--l1);color:#fff;
-  padding:10px 14px calc(10px + env(safe-area-inset-bottom,0px)/8) 14px;
-  border:none;width:100%;text-align:left;
-  font-weight:700;letter-spacing:.02em;
 }
-.emg small{display:block;font-weight:400;font-size:13px;opacity:.92;line-height:1.35}
+.emgcall{
+  flex:1;display:flex;align-items:center;gap:10px;
+  background:none;border:none;color:#fff;text-align:left;
+  padding:10px 8px 10px 14px;font-weight:700;letter-spacing:.02em;
+}
+.emgcall small{display:block;font-weight:400;font-size:13px;opacity:.92;line-height:1.35}
 .emg .dial{margin-left:auto;background:#fff;color:var(--l1);border-radius:999px;padding:6px 16px;font-weight:900;font-size:18px}
+.gear{
+  flex:none;width:54px;background:rgba(255,255,255,.14);border:none;
+  border-left:1px solid rgba(255,255,255,.25);color:#fff;font-size:22px;line-height:1
+}
 
 .wrap{max-width:480px;margin:0 auto;padding:0 16px 120px}
 
@@ -173,16 +179,64 @@ h2{font-size:20px;font-weight:700;margin:26px 0 10px}
 .toast .go[disabled]{opacity:.6}
 @media (prefers-reduced-motion:reduce){.toast .in{transition:none}}
 .offline{background:var(--ink);color:#fff;font-size:13px;text-align:center;padding:9px 14px;line-height:1.45}
+
+/* ---- 全螢幕面板（設定 / QR） ---- */
+.sheet{position:fixed;inset:0;z-index:70;background:var(--paper);display:flex;flex-direction:column;transform:translateY(100%);transition:transform .3s cubic-bezier(.2,.8,.25,1);visibility:hidden}
+.sheet.open{transform:translateY(0);visibility:visible}
+@media (prefers-reduced-motion:reduce){.sheet{transition:none}}
+.sheet header{display:flex;align-items:center;gap:10px;padding:14px 16px;background:var(--teal);color:#fff;flex:none}
+.sheet header h2{margin:0;font-size:18px;font-weight:700;flex:1}
+.sheet header button{background:rgba(255,255,255,.18);border:none;color:#fff;border-radius:10px;padding:9px 14px;font-weight:700;min-height:42px}
+.sheet .scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:18px 16px 40px}
+.sheet .scroll > *{max-width:480px;margin-left:auto;margin-right:auto}
+
+.sec{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px;margin-bottom:14px}
+.sec h3{margin:0 0 4px;font-size:17px;font-weight:700}
+.sec .hint{margin:0 0 14px;font-size:13.5px;color:var(--ink-soft);line-height:1.5}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:13.5px;font-weight:700;color:var(--ink-soft);margin-bottom:5px}
+.field input,.field select,.field textarea{
+  width:100%;font-family:inherit;font-size:16px;color:var(--ink);
+  background:var(--paper);border:1.5px solid var(--line);border-radius:10px;padding:12px;min-height:48px
+}
+.field textarea{min-height:72px;resize:vertical;line-height:1.55}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--teal);outline:none;box-shadow:0 0 0 3px rgba(14,92,99,.16)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.row3{display:grid;grid-template-columns:1.1fr 1fr 1.4fr;gap:8px}
+.save{width:100%;background:var(--teal);color:#fff;border:none;border-radius:12px;padding:15px;font-weight:700;min-height:54px}
+.wipe{width:100%;background:transparent;color:var(--l1);border:1.5px solid var(--l1);border-radius:12px;padding:14px;font-weight:700;min-height:52px}
+.saved{font-size:14px;color:var(--l4);font-weight:700;text-align:center;margin-top:10px;min-height:20px}
+
+.seg{display:grid;gap:8px}
+.seg button{display:flex;gap:10px;align-items:flex-start;text-align:left;background:var(--paper);border:1.5px solid var(--line);border-radius:12px;padding:13px;min-height:56px}
+.seg button[aria-pressed="true"]{border-color:var(--teal);background:#E7F1F1;box-shadow:inset 0 0 0 1.5px var(--teal)}
+.seg .dot{flex:none;width:20px;height:20px;border-radius:50%;border:2px solid var(--line);margin-top:2px}
+.seg button[aria-pressed="true"] .dot{border-color:var(--teal);background:var(--teal);box-shadow:inset 0 0 0 3px #fff}
+.seg b{display:block;font-size:15.5px}
+.seg span{font-size:13px;color:var(--ink-soft);line-height:1.45}
+
+.qrbox{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:18px;text-align:center;margin-bottom:12px}
+.qrbox svg{width:min(100%,268px);height:auto;display:block;margin:0 auto}
+.qrbox .cap{font-size:13.5px;color:var(--ink-soft);margin-top:12px;line-height:1.5}
+.qrurl{font-size:12px;color:var(--ink-soft);word-break:break-all;background:var(--paper);border-radius:8px;padding:10px;margin-top:10px;text-align:left}
+.summary{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px;font-size:14.5px;line-height:1.7}
+.summary dt{font-weight:700;color:var(--ink-soft);font-size:13px;margin-top:10px}
+.summary dt:first-child{margin-top:0}
+.summary dd{margin:2px 0 0}
+.err{background:#FBEAE9;border:1px solid #E7B4B0;color:#7A1D17;border-radius:10px;padding:12px;font-size:14px;line-height:1.55;margin-bottom:12px}
 </style>
 </head>
 <body>
 
-<button class="emg" id="emgBtn">
-  <span>撥打 119
-    <small>意識不清、呼吸困難、胸痛冒冷汗、疑似中風，不要自行開車</small>
-  </span>
-  <span class="dial">119</span>
-</button>
+<div class="emg">
+  <button class="emgcall" id="emgBtn">
+    <span>撥打 119
+      <small>意識不清、呼吸困難、胸痛冒冷汗、疑似中風，不要自行開車</small>
+    </span>
+    <span class="dial">119</span>
+  </button>
+  <button class="gear" id="gearBtn" aria-label="設定" title="設定">⚙</button>
+</div>
 
 <div class="offline hide" id="offlineBar">目前離線，可以繼續完成評估；急診即時資訊與導航需要連線。</div>
 
@@ -197,6 +251,89 @@ h2{font-size:20px;font-weight:700;margin:26px 0 10px}
   </div>
 </div>
 
+<div class="sheet" id="setSheet" role="dialog" aria-modal="true" aria-label="設定">
+  <header><h2>設定</h2><button id="setClose">完成</button></header>
+  <div class="scroll">
+
+    <div class="sec">
+      <h3>個人資料</h3>
+      <p class="hint">只存在這支手機裡，不會自動上傳。填好之後，產生給醫院看的 QR code 時會一併帶入，檢傷時不用再口述一次。</p>
+      <div class="row2">
+        <div class="field"><label for="p_nm">姓名</label><input id="p_nm" autocomplete="name"></div>
+        <div class="field"><label for="p_dob">出生年月日</label><input id="p_dob" type="date"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label for="p_sex">生理性別</label>
+          <select id="p_sex"><option value="">未填</option><option value="女">女</option><option value="男">男</option></select></div>
+        <div class="field"><label for="p_abo">血型</label>
+          <select id="p_abo"><option value="">未填</option><option>A</option><option>B</option><option>O</option><option>AB</option></select></div>
+      </div>
+      <div class="field"><label for="p_dx">慢性病或重大病史</label><textarea id="p_dx" placeholder="例：第二型糖尿病、高血壓、心房顫動"></textarea></div>
+      <div class="field"><label for="p_alg">藥物或食物過敏</label><textarea id="p_alg" placeholder="例：penicillin 起疹；沒有請寫「無」"></textarea></div>
+      <div class="field"><label for="p_med">目前固定用藥</label><textarea id="p_med" placeholder="例：metformin 500mg 早晚各一、Eliquis 5mg"></textarea></div>
+      <div class="row2">
+        <div class="field"><label for="p_hosp">常就醫院所</label><input id="p_hosp" placeholder="例：萬芳醫院"></div>
+        <div class="field"><label for="p_mrn">病歷號</label><input id="p_mrn" inputmode="numeric"></div>
+      </div>
+      <div class="saved" id="savedMsg1"></div>
+    </div>
+
+    <div class="sec">
+      <h3>緊急聯絡人</h3>
+      <p class="hint">建議至少填一位。到院後醫療人員需要聯絡家屬時，掃 QR code 就能直接撥號。</p>
+      <div class="row3">
+        <div class="field"><label for="e1_rel">關係</label><input id="e1_rel" placeholder="配偶"></div>
+        <div class="field"><label for="e1_nm">姓名</label><input id="e1_nm"></div>
+        <div class="field"><label for="e1_tel">電話</label><input id="e1_tel" type="tel" inputmode="tel"></div>
+      </div>
+      <div class="row3">
+        <div class="field"><label for="e2_rel">關係</label><input id="e2_rel" placeholder="子女"></div>
+        <div class="field"><label for="e2_nm">姓名</label><input id="e2_nm"></div>
+        <div class="field"><label for="e2_tel">電話</label><input id="e2_tel" type="tel" inputmode="tel"></div>
+      </div>
+      <button class="save" id="saveProfile">儲存個人資料</button>
+      <div class="saved" id="savedMsg2"></div>
+    </div>
+
+    <div class="sec">
+      <h3>就醫摘要要怎麼交給醫院</h3>
+      <p class="hint">兩種做法的差別在資料會不會離開你的手機。</p>
+      <div class="seg" id="modeSeg">
+        <button data-v="local" aria-pressed="true"><span class="dot"></span>
+          <span><b>離線 QR code（建議）</b><span>所有內容直接編進 QR 圖裡，不經過任何伺服器，沒有網路也能產生。</span></span></button>
+        <button data-v="server" aria-pressed="false"><span class="dot"></span>
+          <span><b>上傳伺服器後產生短連結</b><span>內容存到資料庫，QR 只放一個取件代碼。醫院端讀取較快，但資料會離開手機，需要網路。</span></span></button>
+      </div>
+      <div class="saved" id="modeMsg"></div>
+    </div>
+
+    <div class="sec">
+      <h3>把這個 App 分享出去</h3>
+      <p class="hint">請對方用手機相機掃這個 QR code，就會開啟就醫導航。</p>
+      <div class="qrbox" id="appQr"></div>
+      <button class="save" id="copyLink">複製網址</button>
+      <div class="saved" id="savedMsg3"></div>
+    </div>
+
+    <div class="sec">
+      <h3>清除資料</h3>
+      <p class="hint">刪除這支手機上存的個人資料與緊急聯絡人。已經產生過的 QR code 不會被收回。</p>
+      <button class="wipe" id="wipeBtn">清除本機所有資料</button>
+      <div class="saved" id="savedMsg4"></div>
+    </div>
+
+    <div class="sec">
+      <h3>關於</h3>
+      <p class="hint" id="aboutTxt"></p>
+    </div>
+  </div>
+</div>
+
+<div class="sheet" id="qrSheet" role="dialog" aria-modal="true" aria-label="就醫摘要 QR code">
+  <header><h2>給醫院看的 QR code</h2><button id="qrClose">關閉</button></header>
+  <div class="scroll" id="qrBody"></div>
+</div>
+
 <div class="toast" id="updateToast" role="status" aria-live="polite">
   <div class="in">
     <span class="tx"><b>有新版本</b><span id="updateNote">更新後會重新載入，目前填的內容會清空。</span></span>
@@ -207,17 +344,20 @@ h2{font-size:20px;font-weight:700;margin:26px 0 10px}
 
 <div class="bar" id="bar"><div class="in" id="barIn"></div></div>
 
+<script src="qr.js"></script>
 <script>
 /* ============================================================
-   就醫導航 ED SmartFlow — 原型 v0.1
-   單檔 HTML，無後端。部署於 GitHub Pages。
+   就醫導航 ED SmartFlow — 原型 v0.3
+   單檔 HTML + qr.js，無後端即可運作。部署於 GitHub Pages。
    ============================================================ */
 
 const CONFIG = {
-  version: 'v0.2.0 · 2026-09-14',
+  version: 'v0.3.0 · 2026-09-14',
   /* 即時急診量能 API。留空 = 未串接，畫面會誠實顯示「無即時資料」。
      串接後須回傳：[{id, waitingPatients, pendingWard, pendingIcu, updatedAt}] */
   liveApiBase: '',
+  /* 就醫摘要上傳 API（Railway）。留空 = 只提供離線 QR，不會有任何資料離開手機。 */
+  summaryApiBase: '',
   /* 示範模式：用假資料展示 ETAC 排序效果，畫面會標示「示範資料」 */
   demoMode: false,
   speed: { urban: 24 },      // km/h，市區平均車速
@@ -355,7 +495,6 @@ const app = $('#app'), barIn = $('#barIn');
 
 $('#ver').textContent = '版本 ' + CONFIG.version;
 $('#emgBtn').onclick = () => { location.href = 'tel:119'; };
-
 function toggle(arr, id){ const i = arr.indexOf(id); i < 0 ? arr.push(id) : arr.splice(i,1); }
 
 function speak(txt){
@@ -651,6 +790,14 @@ async function drawResult(){
     $('#worse').onclick = restart;
   }
 
+  const qrCard = document.createElement('div');
+  qrCard.className = 'card';
+  qrCard.innerHTML = `<h3>到院後把這個給檢傷看</h3>
+    <p>把剛剛填的內容和個人資料做成一張 QR code，檢傷護理師掃一下就看得到，不用在很喘或很痛的時候重複講一遍。</p>
+    <button class="link" id="mkQr" style="width:100%;border:none">產生就醫摘要 QR code</button>`;
+  body.appendChild(qrCard);
+  $('#mkQr').onclick = openSummaryQR;
+
   barIn.innerHTML = '';
   const again = document.createElement('button');
   again.className = 'btn ghost'; again.style.flex='1'; again.style.width='auto';
@@ -712,6 +859,193 @@ async function fillHospitals(el, n){
 function restart(){
   Object.assign(state, {step:0, age:null, red:[], sym:null, amber:[], sp:[], level:null});
   render();
+}
+
+/* ============================================================
+   設定、個人資料、就醫摘要 QR
+   ============================================================ */
+const PUBLISHED = 'https://maguro631023.github.io/ed-smartflow/';
+const BASE = /^https?:/.test(location.protocol) ? location.origin + location.pathname.replace(/[^/]*$/, '') : PUBLISHED;
+const VIEWER = BASE + 'v.html';
+
+/* 沙箱或隱私模式可能禁用 localStorage，降級為記憶體，不讓 App 整個掛掉 */
+const mem = {};
+const store = {
+  get(k){ try { return localStorage.getItem(k); } catch(e){ return k in mem ? mem[k] : null; } },
+  set(k,v){ try { localStorage.setItem(k,v); } catch(e){ mem[k] = v; } },
+  del(k){ try { localStorage.removeItem(k); } catch(e){ delete mem[k]; } }
+};
+const PKEY = 'edsf.profile', MKEY = 'edsf.mode';
+const PFIELDS = ['p_nm','p_dob','p_sex','p_abo','p_dx','p_alg','p_med','p_hosp','p_mrn',
+                 'e1_rel','e1_nm','e1_tel','e2_rel','e2_nm','e2_tel'];
+const PLABEL = {p_nm:'姓名',p_dob:'出生',p_sex:'性別',p_abo:'血型',p_dx:'病史',p_alg:'過敏',
+                p_med:'用藥',p_hosp:'常就醫院所',p_mrn:'病歷號'};
+
+let shareMode = store.get(MKEY) || 'local';
+
+function readProfile(){
+  const p = {};
+  PFIELDS.forEach(id => { const el = $('#'+id); if(el && el.value.trim()) p[id] = el.value.trim(); });
+  return p;
+}
+function fillProfile(){
+  let p = {};
+  try { p = JSON.parse(store.get(PKEY) || '{}'); } catch(e){}
+  PFIELDS.forEach(id => { const el = $('#'+id); if(el && p[id] != null) el.value = p[id]; });
+}
+function flash(sel, msg){ const el = $(sel); el.textContent = msg; setTimeout(()=>{ el.textContent = ''; }, 2600); }
+
+function openSheet(sel){ $(sel).classList.add('open'); document.body.style.overflow = 'hidden'; }
+function closeSheet(sel){ $(sel).classList.remove('open'); document.body.style.overflow = ''; }
+
+$('#gearBtn').onclick = () => {
+  fillProfile();
+  syncMode();
+  $('#aboutTxt').innerHTML = `就醫導航 ED SmartFlow ${CONFIG.version}<br>
+    本工具提供就醫層級建議與導引，不做疾病診斷，也不取代醫療專業人員的判斷。<br>
+    個人資料預設只存在本機，不會自動上傳。`;
+  if(!$('#appQr').dataset.done){
+    try {
+      $('#appQr').innerHTML = QR.svg(PUBLISHED, 268) +
+        `<div class="cap">就醫導航 App</div><div class="qrurl">${PUBLISHED}</div>`;
+      $('#appQr').dataset.done = '1';
+    } catch(e){ $('#appQr').innerHTML = '<div class="err">QR code 產生失敗。</div>'; }
+  }
+  openSheet('#setSheet');
+};
+$('#setClose').onclick = () => closeSheet('#setSheet');
+$('#qrClose').onclick = () => closeSheet('#qrSheet');
+
+$('#saveProfile').onclick = () => {
+  store.set(PKEY, JSON.stringify(readProfile()));
+  flash('#savedMsg2', '已儲存在這支手機');
+};
+$('#wipeBtn').onclick = () => {
+  if(!confirm('確定清除本機儲存的個人資料與緊急聯絡人？')) return;
+  store.del(PKEY);
+  PFIELDS.forEach(id => { const el = $('#'+id); if(el) el.value = ''; });
+  flash('#savedMsg4', '已清除');
+};
+$('#copyLink').onclick = async () => {
+  try { await navigator.clipboard.writeText(PUBLISHED); flash('#savedMsg3', '已複製網址'); }
+  catch(e){ flash('#savedMsg3', '複製失敗，請長按上方網址手動複製'); }
+};
+
+function syncMode(){
+  $('#modeSeg').querySelectorAll('button').forEach(b =>
+    b.setAttribute('aria-pressed', b.dataset.v === shareMode));
+  $('#modeMsg').textContent = (shareMode === 'server' && !CONFIG.summaryApiBase)
+    ? '尚未設定伺服器位址，目前仍會使用離線 QR。' : '';
+}
+$('#modeSeg').querySelectorAll('button').forEach(b => b.onclick = () => {
+  shareMode = b.dataset.v; store.set(MKEY, shareMode); syncMode();
+});
+
+/* ---------- 摘要內容 ----------
+   QR 裡放代碼而不是整段中文，體積差三倍以上，掃描才穩。
+   v.html 有同一份對照表，遇到不認得的代碼會原樣顯示，不會靜默吃掉。 */
+const AGE_T = {infant:'未滿 3 個月嬰兒', child:'3 個月～12 歲', adult:'13～64 歲', elder:'65 歲以上'};
+const SHORT = {p_nm:'n', p_dob:'b', p_sex:'g', p_abo:'bt', p_dx:'dx', p_alg:'al',
+               p_med:'md', p_hosp:'hs', p_mrn:'mr'};
+
+function buildSummary(){
+  const r = decide(), p = readProfile(), sp = {};
+  Object.keys(SHORT).forEach(k => { if(p[k]) sp[SHORT[k]] = p[k]; });
+  const e = [1,2].map(n => [p['e'+n+'_rel'] || '', p['e'+n+'_nm'] || '', p['e'+n+'_tel'] || ''])
+                 .filter(a => a[1] || a[2]);
+  if(e.length) sp.e = e;
+  return {
+    v: 1, d: 1, t: new Date().toISOString(), lv: r.lv,
+    ag: state.age || '', sy: state.sym || '',
+    rf: state.red.slice(), am: state.amber.slice(), sp: state.sp.slice(),
+    p: sp
+  };
+}
+
+/* 把代碼展開回人看得懂的文字（畫面預覽用） */
+function amberText(id){
+  for(const k in AMBER){ const o = AMBER[k].find(x => x.id === id); if(o) return o.t; }
+  return id;
+}
+function describe(d){
+  const pick = (ids, src) => ids.map(i => { const o = src.find(x => x.id === i); return o ? o.t : i; });
+  return {
+    lv: d.lv,
+    age: AGE_T[d.ag] || '',
+    sym: (SYMPTOMS.find(s => s.id === d.sy) || {}).t || '',
+    red: pick(d.rf, RED_FLAGS),
+    amb: d.am.map(amberText),
+    sp: pick(d.sp, SPECIAL)
+  };
+}
+
+function b64url(u8){
+  let s = '';
+  for(let i = 0; i < u8.length; i++) s += String.fromCharCode(u8[i]);
+  return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+async function encodePayload(obj){
+  const bytes = new TextEncoder().encode(JSON.stringify(obj));
+  if(typeof CompressionStream !== 'undefined'){
+    try {
+      const cs = new CompressionStream('deflate-raw');
+      const w = cs.writable.getWriter(); w.write(bytes); w.close();
+      const buf = new Uint8Array(await new Response(cs.readable).arrayBuffer());
+      if(buf.length < bytes.length) return 'z:' + b64url(buf);
+    } catch(e){}
+  }
+  return 'j:' + b64url(bytes);
+}
+
+async function openSummaryQR(){
+  const body = $('#qrBody');
+  body.innerHTML = '<div class="sec"><p class="hint">產生中…</p></div>';
+  openSheet('#qrSheet');
+
+  const data = buildSummary();
+  let url = null, err = null, viaServer = false;
+
+  if(shareMode === 'server' && CONFIG.summaryApiBase){
+    try {
+      const r = await fetch(CONFIG.summaryApiBase + '/summary', {
+        method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)
+      });
+      if(!r.ok) throw new Error('HTTP ' + r.status);
+      const j = await r.json();
+      url = VIEWER + '?k=' + encodeURIComponent(j.id);
+      viaServer = true;
+    } catch(e){ err = '上傳失敗（' + e.message + '），已改用離線 QR。'; }
+  }
+  if(!url) url = VIEWER + '#' + await encodePayload(data);
+
+  let svg = '';
+  try { svg = QR.svg(url, 288); }
+  catch(e){
+    body.innerHTML = '<div class="err">內容太長，做不進一張 QR code。請到設定把「慢性病」「目前固定用藥」欄位寫短一點，或改用上傳伺服器模式。</div>';
+    return;
+  }
+
+  const dl = (k, v) => (v && v.length) ? `<dt>${k}</dt><dd>${Array.isArray(v) ? v.join('；') : v}</dd>` : '';
+  const view = describe(data);
+  const prof = Object.keys(PLABEL).map(k => dl(PLABEL[k], data.p[SHORT[k]])).join('');
+  const ec = (data.p.e || []).map(a => `<dd>${a[0] || '聯絡人'}　${a[1]}　${a[2]}</dd>`).join('');
+
+  body.innerHTML =
+    (err ? `<div class="err">${err}</div>` : '') +
+    `<div class="qrbox">${svg}
+       <div class="cap">請把螢幕亮度調到最亮，交給檢傷櫃台掃描。<br>
+       ${viaServer ? '此碼對應伺服器上的一筆紀錄。' : '內容直接編在圖裡，沒有經過任何伺服器。'}</div>
+     </div>
+     <div class="sec"><h3>QR code 裡有什麼</h3>
+       <dl class="summary" style="margin:0;border:none;padding:0">
+         ${dl('建議層級', {L1:'第 1 級 · 撥 119', L2:'第 2 級 · 建議急診', L3:'第 3 級 · 診所門診', L4:'第 4 級 · 居家觀察'}[view.lv])}
+         ${dl('年齡層', view.age)}${dl('主要不適', view.sym)}
+         ${dl('危險徵象', view.red)}${dl('症狀警訊', view.amb)}${dl('特殊狀況', view.sp)}
+         ${prof}${ec ? '<dt>緊急聯絡人</dt>' + ec : ''}
+         ${dl('產生時間', new Date(data.t).toLocaleString('zh-TW'))}
+       </dl></div>
+     <div class="note">這些是你自己填的內容，不是診斷。醫療人員仍會重新檢傷與評估。<br>
+       畫面含個人資料，請不要截圖外傳。</div>`;
 }
 
 render();

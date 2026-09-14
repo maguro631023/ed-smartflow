@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>就醫摘要 — 就醫導航</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#0E5C63">
+<link rel="icon" href="icons/favicon-32.png" sizes="32x32">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{--paper:#F5F7F8;--card:#fff;--ink:#10202A;--soft:#4A6270;--line:#D8E0E4;--teal:#0E5C63;
+      --l1:#B3261E;--l2:#C75300;--l3:#8A6A00;--l4:#1B6B43}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);
+  font-family:"Noto Sans TC",system-ui,-apple-system,"PingFang TC","Microsoft JhengHei",sans-serif;
+  font-size:17px;line-height:1.6;font-variant-numeric:tabular-nums}
+.wrap{max-width:640px;margin:0 auto;padding:0 16px 60px}
+.band{padding:22px 20px;color:#fff}
+.band .k{font-size:13px;font-weight:700;opacity:.9}
+.band h1{margin:4px 0 6px;font-size:27px;font-weight:900;line-height:1.3}
+.band p{margin:0;font-size:14.5px;opacity:.95}
+.band.L1{background:var(--l1)}.band.L2{background:var(--l2)}
+.band.L3{background:var(--l3)}.band.L4{background:var(--l4)}
+.head{background:var(--teal);color:#fff;padding:12px 16px;font-size:14px;font-weight:700}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin-top:14px}
+.card h2{margin:0 0 12px;font-size:15px;font-weight:700;color:var(--soft);
+  padding-bottom:8px;border-bottom:1px solid var(--line)}
+dl{margin:0}
+dt{font-size:13px;font-weight:700;color:var(--soft);margin-top:12px}
+dt:first-of-type{margin-top:0}
+dd{margin:2px 0 0;font-size:17px}
+ul{margin:4px 0 0;padding-left:20px}
+li{margin-bottom:4px}
+.flag li{color:#7A1D17;font-weight:700}
+.name{font-size:24px;font-weight:900;letter-spacing:.01em}
+.tel{display:inline-block;background:var(--teal);color:#fff;text-decoration:none;
+  border-radius:9px;padding:8px 15px;font-weight:700;margin-top:5px;font-size:16px}
+.warn{background:#FFF8E8;border:1px solid #E8D49A;border-radius:12px;padding:14px;
+  font-size:14px;line-height:1.6;margin-top:14px}
+.err{background:#FBEAE9;border:1px solid #E7B4B0;color:#7A1D17;border-radius:12px;
+  padding:18px;margin-top:20px;font-size:15px;line-height:1.6}
+.meta{font-size:12.5px;color:var(--soft);margin-top:18px;padding-top:14px;border-top:1px solid var(--line);line-height:1.6}
+.pr{background:#fff;border:1.5px solid var(--teal);color:var(--teal);border-radius:10px;
+  padding:12px 18px;font-weight:700;font-family:inherit;font-size:15px;margin-top:16px;cursor:pointer}
+@media print{.head,.pr,.warn{display:none}body{background:#fff;font-size:12pt}.card{border:none;padding:0;margin-top:10pt}}
+</style>
+</head>
+<body>
+<div class="head">就醫導航 · 病人自述摘要（非診斷）</div>
+<div id="out"></div>
+
+<script>
+const API_BASE = '';   // Railway 就醫摘要 API；留空表示只支援離線 QR
+
+const LV = {
+  L1:{h:'第 1 級 · 建議立即緊急處置', p:'使用者回報有立即危險徵象，App 已指示撥打 119。'},
+  L2:{h:'第 2 級 · 建議急診評估', p:'有需要在急診排除的警訊，生命徵象由 App 判斷時尚屬穩定。'},
+  L3:{h:'第 3 級 · 建議診所或門診', p:'App 未偵測到急診警訊，但建議當日由醫師評估。'},
+  L4:{h:'第 4 級 · 可居家觀察', p:'App 未偵測到急診警訊，已提供惡化警示清單。'}
+};
+/* 欄位代碼對照（由 index.html 的資料表產生，兩邊必須一致） */
+const PLABEL = {n:'姓名', b:'出生年月日', g:'生理性別', bt:'血型', dx:'慢性病或重大病史',
+                al:'藥物或食物過敏', md:'目前固定用藥', hs:'常就醫院所', mr:'病歷號'};
+const DICT_VERSION = 1;
+const DICT = {
+  ag: {"infant":"未滿 3 個月嬰兒","child":"3 個月～12 歲","adult":"13～64 歲","elder":"65 歲以上"},
+  sy: {"fever":"發燒","resp":"咳嗽喉嚨痛","gi":"腹痛嘔吐腹瀉","chest2":"胸悶心悸","head":"頭痛頭暈","injury":"外傷跌倒","urine":"排尿不適","skin":"皮疹過敏","other":"其他不適"},
+  rf: {"conscious":"叫不醒、意識模糊、答非所問","stroke":"臉歪、單側手腳無力、突然講話不清","chest":"胸口悶痛且冒冷汗、痛到冒汗想吐","breath":"喘到說不出完整句子、嘴唇發紫","bleed":"大量出血壓不住、吐血、大量血便","seizure":"抽搐、痙攣，或抽搐後未清醒","headache":"這輩子最痛的頭痛，幾秒內爆發","trauma":"車禍、高處墜落、被重物撞擊","poison":"誤食藥物、化學品、疑似中毒"},
+  am: {"f1":"發燒超過 3 天沒有退，或退燒藥壓不下來","f2":"合併意識改變、脖子僵硬、劇烈頭痛","f3":"發燒合併呼吸變喘、皮膚出現壓不退的紫斑","f4":"3 個月以下嬰兒發燒","r1":"走幾步就喘、平躺會喘醒","r2":"咳血或痰中帶血","r3":"喉嚨痛到吞不下口水、流口水、聲音改變","r4":"原本慢性肺病，這兩天明顯惡化","g1":"腹痛越來越痛，按壓後放開更痛","g2":"解黑便、血便，或嘔吐物帶血","g3":"吐到完全喝不下水、超過 8 小時沒尿","g4":"腹痛合併發燒、皮膚或眼白變黃","c1":"胸痛持續超過 15 分鐘沒有緩解","c2":"胸痛延伸到下巴、左手臂或背部","c3":"心悸合併頭暈、快昏倒、冒冷汗","c4":"突然單側小腿腫痛後開始胸痛或喘","h1":"頭痛合併發燒、脖子僵硬、噴射狀嘔吐","h2":"頭暈到站不穩、走路偏一邊、看東西有雙影","h3":"頭部受過撞擊後才開始頭痛或嘔吐","h4":"突然聽不到、單側耳鳴合併嚴重暈眩","i1":"肢體變形、無法承重或完全不能動","i2":"傷口深、很大、有異物、或壓 10 分鐘仍在流血","i3":"頭部受傷後曾昏過去、嘔吐或記不得經過","i4":"被動物咬傷、生鏽金屬穿刺傷","u1":"完全尿不出來、下腹脹痛","u2":"腰側劇痛到冒冷汗、合併發燒發冷","u3":"血尿合併發燒","u4":"男性陰囊突然劇痛腫脹","s1":"嘴唇或眼皮腫、喉嚨緊、聲音變啞","s2":"全身起疹合併頭暈、想吐、快昏倒","s3":"皮膚出現壓不退的紫斑或大片水泡","s4":"紅腫熱痛範圍一天內明顯擴大並發燒","o1":"症狀在幾小時內明顯惡化","o2":"整個人虛弱到站不起來、無法自理","o3":"家人覺得「跟平常很不一樣」","o4":"合併發燒或呼吸變喘"},
+  sp: {"chemo":"癌症治療中","immuno":"免疫力低下","preg":"懷孕或產後 6 週內","anticoag":"服用抗凝血劑","dialysis":"洗腎中","postop":"一個月內開過刀或做過侵入性處置","port":"身上有人工血管、導管或引流管","infant":"3 個月以下嬰兒"}
+};
+const look = (kind, id) => (DICT[kind] && DICT[kind][id]) || ('未知代碼 ' + id);
+
+function unb64url(s){
+  s = s.replace(/-/g,'+').replace(/_/g,'/');
+  while(s.length % 4) s += '=';
+  const bin = atob(s), u = new Uint8Array(bin.length);
+  for(let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+  return u;
+}
+async function decodePayload(frag){
+  const kind = frag.slice(0, 2), body = frag.slice(2);
+  const u = unb64url(body);
+  if(kind === 'z:'){
+    const ds = new DecompressionStream('deflate-raw');
+    const w = ds.writable.getWriter(); w.write(u); w.close();
+    const buf = await new Response(ds.readable).arrayBuffer();
+    return JSON.parse(new TextDecoder().decode(buf));
+  }
+  return JSON.parse(new TextDecoder().decode(u));
+}
+
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const li = a => '<ul>' + a.map(x => '<li>' + esc(x) + '</li>').join('') + '</ul>';
+const row = (k, v) => (v && v.length) ? `<dt>${k}</dt><dd>${esc(v)}</dd>` : '';
+
+function render(d){
+  const lv = LV[d.lv] || {h:'未標示層級', p:''};
+  const p = d.p || {};
+  const many = (ids, kind) => (ids || []).map(i => look(kind, i));
+  const red = many(d.rf, 'rf'), amb = many(d.am, 'am'), spc = many(d.sp, 'sp');
+  const age = d.ag ? look('ag', d.ag) : '';
+  const sym = d.sy ? look('sy', d.sy) : '';
+  const stale = (d.d || 1) !== DICT_VERSION;
+
+  const contacts = (p.e || []).map(a =>
+    `<dt>${esc(a[0] || '聯絡人')}</dt><dd>${esc(a[1] || '')}
+      ${a[2] ? `<br><a class="tel" href="tel:${esc(a[2])}">撥打 ${esc(a[2])}</a>` : ''}</dd>`).join('');
+
+  document.getElementById('out').innerHTML = `
+    <div class="band ${d.lv || 'L3'}">
+      <div class="k">App 分流建議</div><h1>${lv.h}</h1><p>${lv.p}</p>
+    </div>
+    <div class="wrap">
+      ${stale ? '<div class="warn">這張 QR code 使用不同版本的代碼表，部分項目可能顯示為代碼。請以病人口述為準。</div>' : ''}
+      ${p.n ? `<div class="card"><h2>病人</h2>
+        <div class="name">${esc(p.n)}</div>
+        <dl>${row('出生年月日', p.b)}${row('生理性別', p.g)}${row('血型', p.bt)}
+            ${row('常就醫院所', p.hs)}${row('病歷號', p.mr)}</dl></div>` : ''}
+
+      <div class="card"><h2>本次主訴</h2>
+        <dl>${row('年齡層', age)}${row('主要不適', sym)}
+        ${red.length ? `<dt>回報的立即危險徵象</dt><dd class="flag">${li(red)}</dd>` : ''}
+        ${amb.length ? `<dt>回報的症狀警訊</dt><dd>${li(amb)}</dd>` : ''}
+        ${spc.length ? `<dt>特殊狀況</dt><dd>${li(spc)}</dd>` : ''}
+        </dl></div>
+
+      ${(p.dx || p.al || p.md) ? `<div class="card"><h2>病史與用藥（病人自述）</h2>
+        <dl>${row(PLABEL.al, p.al)}${row(PLABEL.dx, p.dx)}${row(PLABEL.md, p.md)}</dl></div>` : ''}
+
+      ${contacts ? `<div class="card"><h2>緊急聯絡人</h2><dl>${contacts}</dl></div>` : ''}
+
+      <div class="warn">以上皆為病人或家屬在 App 中自行勾選與填寫的內容，未經醫療人員確認，
+        也不是診斷。請依院內檢傷流程重新評估。</div>
+      <button class="pr" onclick="window.print()">列印或存成 PDF</button>
+      <div class="meta">產生時間：${d.t ? esc(new Date(d.t).toLocaleString('zh-TW')) : '未知'}<br>
+        來源：就醫導航 ED SmartFlow（格式版本 ${esc(d.v || 1)}）</div>
+    </div>`;
+}
+
+function fail(msg){
+  document.getElementById('out').innerHTML =
+    `<div class="wrap"><div class="err"><b>無法顯示就醫摘要</b><br>${esc(msg)}</div>
+     <div class="meta">請請病人在 App 的結果頁重新產生一次 QR code。</div></div>`;
+}
+
+(async function(){
+  try{
+    const key = new URLSearchParams(location.search).get('k');
+    if(key){
+      if(!API_BASE) return fail('這個 QR code 需要伺服器查詢，但本站尚未設定伺服器位址。');
+      const r = await fetch(API_BASE + '/summary/' + encodeURIComponent(key));
+      if(r.status === 404) return fail('查無這筆資料，可能已經過期或被刪除。');
+      if(!r.ok) throw new Error('HTTP ' + r.status);
+      return render(await r.json());
+    }
+    const frag = decodeURIComponent(location.hash.replace(/^#/, ''));
+    if(!frag) return fail('網址裡沒有資料。請直接掃描 App 產生的 QR code。');
+    render(await decodePayload(frag));
+  }catch(e){
+    fail('資料格式無法解析（' + e.message + '）。');
+  }
+})();
+</script>
+</body>
+</html>
